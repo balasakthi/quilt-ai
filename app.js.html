@@ -1,0 +1,209 @@
+<script>
+  const app = Vue.createApp({
+    data() {
+      return {
+        columnTitle: null,
+        columnValues: null,
+        columnValue: null,
+        selectedColumn: null,
+        selectedAnalysis: null,
+        analysis: ["Predict", "Sentiment Analysis"],
+        threshold: null,
+        topClasses: null,
+        status: "No analysis running",
+        // baseUrl: "https://clip-image-search-fp6lcfwasa-uc.a.run.app/api/image-search",
+        // baseUrl: "https://tai-emotion-analysis-microservice-tcsavghznq-as.a.run.app/fetch/predict",
+        baseUrl:
+          "https://platform-detect-joy-inside-text-dev-fp6lcfwasa-as.a.run.app/detect-joy",
+        error: null,
+        result: null,
+        requests: null,
+        counter: 0,
+        lastColumn: null,
+      };
+    },
+    mounted() {
+      this.refreshColumn();
+      this.getLastColVal();
+    },
+    computed: {
+      columnHeader() {
+        return this.columnTitle;
+      },
+      checkVal() {
+        return this.selectedColumn != null &&
+          this.selectedAnalysis != null &&
+          this.columnValues != null
+          ? false
+          : true;
+      },
+    },
+    methods: {
+      refreshColumn() {
+        let val = this;
+        this.columnValues = null;
+        google.script.run
+          .withSuccessHandler(function (header) {
+            val.columnTitle = header;
+          })
+          .getColumnHeader();
+        if (this.columnTitle != null) {
+          this.getColumnValues();
+          this.getLastColVal();
+        }
+      },
+
+      getColumnValues() {
+        let val = this;
+        google.script.run
+          .withSuccessHandler(function (colValue) {
+            val.columnValues = colValue;
+          })
+          .getByName(this.selectedColumn);
+      },
+
+      getLastColVal() {
+        let val = this;
+        google.script.run
+          .withSuccessHandler(function (colValue) {
+            val.lastColumn = colValue;
+            console.log(colValue);
+          })
+          .lastColumnValue();
+      },
+
+      flattenJSON(obj = {}, res = {}, extraKey = "") {
+        for (key in obj) {
+          if (obj[key].length == 0) {
+            obj[key] = [
+              {
+                label: "No Data Found",
+                score: "0",
+                theme: "No Data Found",
+              },
+            ];
+          }
+          if (typeof obj[key] !== "object") {
+            res[extraKey + key] = obj[key];
+          } else {
+            this.flattenJSON(obj[key], res, `${extraKey}${key} `);
+          }
+        }
+        return res;
+      },
+
+      JSONtoArray(json, index) {
+        var keys = Object.keys(json).sort();
+        var header = [];
+        var newCols = [];
+
+        for (var k = 0; k < keys.length; k++) {
+          if (header.indexOf(keys[k]) === -1) {
+            newCols.push(keys[k]);
+          }
+        }
+
+        if (newCols.length > 0) {
+          header = header.concat(newCols);
+        }
+
+        var row = [];
+        for (var h = 0; h < header.length; h++) {
+          row.push(header[h] in json ? json[header[h]] : "");
+        }
+
+        const chunkSize = 3;
+        let chunk;
+        for (let i = 2; i < row.length - 1; i += chunkSize) {
+          chunk = row.slice(i, i + chunkSize);
+          chunk = [index, ...chunk];
+        }
+        console.log(chunk);
+        return chunk;
+      },
+
+      async fetchInfo(columnValue, index) {
+        const analyzeText = {
+          input_text: [columnValue],
+          confidence_score: this.threshold != null ? this.threshold : 0.5,
+          top_results_count: this.topClasses ? this.topClasses : 3,
+        };
+
+        try {
+          let data = await fetch(this.baseUrl, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify(analyzeText),
+          });
+
+          if (!data.ok) {
+            throw Error("No Data Found");
+          }
+
+          this.result = await data.json();
+
+          this.result = this.JSONtoArray(this.flattenJSON(this.result), index);
+
+          return this.result;
+        } catch (err) {
+          this.error = err.message;
+          console.log(this.error, index);
+        }
+      },
+
+      async writeData(data) {
+        google.script.run.writeHeader(this.lastColumn);
+        google.script.run.writeDataToRange(
+          data,
+          data.length,
+          this.counter,
+          this.lastColumn
+        );
+      },
+
+      async handleAnalyze() {
+        this.getLastColVal();
+        this.getColumnValues();
+        this.status = "Analyzing";
+        this.error = "";
+        this.counter = 1;
+        let result = [];
+        let rows = [];
+
+        if (this.columnValues != null) {
+          const chunkSize = 20;
+
+          for (let i = 0; i < this.columnValues.length; i += chunkSize) {
+            result = [];
+            const columnText = this.columnValues.slice(i, i + chunkSize);
+
+            await Promise.allSettled(
+              columnText.map(async (column, index) => {
+                if (column.length) {
+                  let data = await this.fetchInfo(column, index).then(
+                    (results) => JSON.parse(JSON.stringify(results))
+                  );
+                  result.push(data);
+                } else {
+                  result.push([index, "", "", ""]);
+                }
+              })
+            ).then(() => (this.status = "Analyzing"));
+
+            result.sort((index1, index2) => index1[0] - index2[0]);
+
+            result.forEach((array) => array.splice(0, 1));
+
+            this.writeData(result);
+            this.counter += chunkSize;
+          }
+        }
+        this.status = "No Analysis running";
+      },
+    },
+  });
+
+  app.mount("#app");
+</script>

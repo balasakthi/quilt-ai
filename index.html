@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css"
+    />
+    <script src="https://unpkg.com/vue@3.2.36/dist/vue.global.js"></script>
+    <?!= include('styles'); ?>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <nav class="nav">
+          <a class="nav__brand" href="/"
+            ><img
+              src="https://raw.githubusercontent.com/balasakthi88/quilt-ai/main/quilt-logo.png"
+              alt=""
+          /></a>
+          <ul class="list nav__list">
+            <li class="nav__item"><a href="#">Analytics</a></li>
+            <li class="nav__item"><a href="#">Account</a></li>
+            <li class="nav__item"><a href="#">Settings</a></li>
+          </ul>
+        </nav>
+      </header>
+      <section>
+        <!-- <span>{{columnValues}}</span> -->
+        <div style="color: tomato">{{error}}</div>
+
+        <div class="status__block">
+          <span class="status__text">{{status}}</span>
+          <span v-if="status ==='Analyzing'" class="spin"></span>
+        </div>
+        <form @submit.prevent="handleAnalyze">
+          <fieldset>
+            <label for="columnSelect">Choose a Column</label>
+            <div class="columnName">
+              <select
+                id="columnSelect"
+                v-model="selectedColumn"
+                @change="getColumnValues()"
+                required
+              >
+                <option disabled value="">Please select one</option>
+                <option v-for="(column, key) in columnHeader" :value="column">
+                  {{column}}
+                </option>
+              </select>
+              <div class="refreshIcon">
+                <a href="#" v-on:click="refreshColumn()">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M20.944 12.979c-.489 4.509-4.306 8.021-8.944 8.021-2.698 0-5.112-1.194-6.763-3.075l1.245-1.633c1.283 1.645 3.276 2.708 5.518 2.708 3.526 0 6.444-2.624 6.923-6.021h-2.923l4-5.25 4 5.25h-3.056zm-15.864-1.979c.487-3.387 3.4-6 6.92-6 2.237 0 4.228 1.059 5.51 2.698l1.244-1.632c-1.65-1.876-4.061-3.066-6.754-3.066-4.632 0-8.443 3.501-8.941 8h-3.059l4 5.25 4-5.25h-2.92z"
+                    />
+                  </svg>
+                </a>
+              </div>
+            </div>
+            <label for="analysisSelect">Choose an Analysis</label>
+            <select id="analysisSelect" v-model="selectedAnalysis" required>
+              <option disabled value="">Please select one</option>
+              <option v-for="(analyze, key) in analysis" :value="analyze">
+                {{analyze}}
+              </option>
+            </select>
+
+            <button :disabled="checkVal" type="submit">Run</button>
+          </fieldset>
+        </form>
+      </section>
+      <footer>
+        <img
+          src="https://raw.githubusercontent.com/balasakthi88/quilt-ai/main/quilt-logo.png"
+          alt=""
+        />
+      </footer>
+    </div>
+    <?!= include('app.js'); ?>
+  </body>
+</html>
