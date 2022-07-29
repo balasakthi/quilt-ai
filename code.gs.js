@@ -58,7 +58,7 @@ function lastColumnValue() {
   return last;
 }
 
-function writeDataToRange(data, rowCount, counter, lastCol) {
+function writeDataToRange(data, counter, lastCol) {
   row = counter + 1;
   sheet
     .getRange(row, lastCol + 1, data.length, 3)
