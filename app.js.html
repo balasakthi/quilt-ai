@@ -20,6 +20,9 @@
         requests: null,
         counter: 0,
         lastColumn: null,
+        isLoading: true,
+        elapsedTime: 0,
+        timer: undefined,
       };
     },
     mounted() {
@@ -37,20 +40,40 @@
           ? false
           : true;
       },
+      formattedElapsedTime() {
+        const date = new Date(null);
+        date.setSeconds(this.elapsedTime / 1000);
+        const utc = date.toUTCString();
+        console.log(utc);
+        return utc.substr(utc.indexOf(":") + 1, 5);
+      },
     },
     methods: {
       refreshColumn() {
         let val = this;
+        this.isLoading = !this.isLoading;
         this.columnValues = null;
+        this.reset();
         google.script.run
           .withSuccessHandler(function (header) {
             val.columnTitle = header;
+            val.isLoading = false;
           })
           .getColumnHeader();
         if (this.columnTitle != null) {
           this.getColumnValues();
           this.getLastColVal();
         }
+      },
+
+      getLastColVal() {
+        let val = this;
+        google.script.run
+          .withSuccessHandler(function (colValue) {
+            val.lastColumn = colValue;
+          })
+          .lastColumnValue();
+        console.log("Last Column Value", this.lastColumn);
       },
 
       getColumnValues() {
@@ -60,16 +83,6 @@
             val.columnValues = colValue;
           })
           .getByName(this.selectedColumn);
-      },
-
-      getLastColVal() {
-        let val = this;
-        google.script.run
-          .withSuccessHandler(function (colValue) {
-            val.lastColumn = colValue;
-            console.log(colValue);
-          })
-          .lastColumnValue();
       },
 
       flattenJSON(obj = {}, res = {}, extraKey = "") {
@@ -153,19 +166,22 @@
         }
       },
 
-      async writeData(data) {
-        google.script.run.writeHeader(this.lastColumn);
+      async writeData(data, lastColumn) {
+        console.log("################", lastColumn);
+        google.script.run.writeHeader(lastColumn);
         google.script.run.writeDataToRange(
           data,
           data.length,
           this.counter,
-          this.lastColumn
+          lastColumn
         );
       },
 
       async handleAnalyze() {
         this.getLastColVal();
         this.getColumnValues();
+        this.reset();
+        this.start();
         this.status = "Analyzing";
         this.error = "";
         this.counter = 1;
@@ -196,11 +212,25 @@
 
             result.forEach((array) => array.splice(0, 1));
 
-            this.writeData(result);
+            this.writeData(result, this.lastColumn);
             this.counter += chunkSize;
           }
         }
         this.status = "No Analysis running";
+        this.stop();
+        this.getLastColVal();
+      },
+
+      start() {
+        this.timer = setInterval(() => {
+          this.elapsedTime += 1000;
+        }, 1000);
+      },
+      stop() {
+        clearInterval(this.timer);
+      },
+      reset() {
+        this.elapsedTime = 0;
       },
     },
   });

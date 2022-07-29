@@ -37,6 +37,9 @@ function getByName(columnName) {
 
   for (row = 1; row < data.length; ++row) {
     columnValue.push(data[row][columnIndex]);
+    // if (data[row][columnIndex] != "") {
+    //   columnValue.push(data[row][columnIndex]);
+    // }
   }
   return columnValue;
 }

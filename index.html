@@ -31,11 +31,14 @@
       </header>
       <section>
         <!-- <span>{{columnValues}}</span> -->
+        <!-- <span>{{isLoading}}</span> -->
+
         <div style="color: tomato">{{error}}</div>
 
         <div class="status__block">
           <span class="status__text">{{status}}</span>
-          <span v-if="status ==='Analyzing'" class="spin"></span>
+          <span v-if="status ==='Analyzing'" class="loader"></span>
+          <span class="timer" v-if="elapsedTime">{{formattedElapsedTime}}</span>
         </div>
         <form @submit.prevent="handleAnalyze">
           <fieldset>
@@ -52,22 +55,25 @@
                   {{column}}
                 </option>
               </select>
-              <div class="refreshIcon">
+              <div class="refresh">
                 <a href="#" v-on:click="refreshColumn()">
                   <svg
+                    v-show="!isLoading"
+                    class="refreshIcon"
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
                     height="20"
                     viewBox="0 0 24 24"
                   >
                     <path
-                      d="M20.944 12.979c-.489 4.509-4.306 8.021-8.944 8.021-2.698 0-5.112-1.194-6.763-3.075l1.245-1.633c1.283 1.645 3.276 2.708 5.518 2.708 3.526 0 6.444-2.624 6.923-6.021h-2.923l4-5.25 4 5.25h-3.056zm-15.864-1.979c.487-3.387 3.4-6 6.92-6 2.237 0 4.228 1.059 5.51 2.698l1.244-1.632c-1.65-1.876-4.061-3.066-6.754-3.066-4.632 0-8.443 3.501-8.941 8h-3.059l4 5.25 4-5.25h-2.92z"
+                      d="m 10.5,2 c 5.288,0 9.649,3.914 10.377,9 H 24 L 20,16.917 16,11 h 2.847 C 18.136,7.028 14.673,4 10.5,4 5.813,4 2,7.813 2,12.5 c 0,4.687 3.813,8.5 8.5,8.5 3.015,0 5.662,-1.583 7.171,-3.957 l 1.2,1.775 C 16.955,21.354 13.923,23 10.5,23 4.703,23 0,18.298 0,12.5 0,6.702 4.703,2 10.5,2 Z"
                     />
                   </svg>
                 </a>
+                <span v-show="isLoading" class="loader"></span>
               </div>
             </div>
-            <label for="analysisSelect">Choose an Analysis</label>
+            <label for="analysisSelect">Choose an Analytics</label>
             <select id="analysisSelect" v-model="selectedAnalysis" required>
               <option disabled value="">Please select one</option>
               <option v-for="(analyze, key) in analysis" :value="analyze">
